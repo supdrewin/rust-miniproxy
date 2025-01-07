@@ -1,6 +1,8 @@
+use std::str;
+
 use async_std::net::{TcpListener, TcpStream};
 use async_std::prelude::*;
-use log::{debug, error, info};
+use log::{error, info};
 
 use crate::ciper::CiperTcpStream;
 use crate::config::LocalConfig;
@@ -13,33 +15,31 @@ use async_std::io::{Read, Write};
 use futures::future::FutureExt;
 
 pub async fn run_local(config: LocalConfig) -> Result<()> {
-    let addr = format!("{}:{}", config.host.unwrap(), config.port.unwrap());
-    let remote_addr = config.server.unwrap();
+    let host = config.host.unwrap();
+    let port = config.port.unwrap();
+    let server = config.server.unwrap();
     let password = config.password.unwrap();
+
+    let addr = format!("{host}:{port}");
 
     info!("MINILOCAL listening on {addr}");
     info!("Serve [ HTTP | HTTPS | SOCKS5 ]");
     info!("PAC url http://{addr}/pac");
 
+    let listener = TcpListener::bind(addr).await?;
     let password = decode_password(&password)?;
 
-    let server = TcpListener::bind(addr).await?;
-    while let Some(stream) = server.incoming().next().await {
-        let stream = stream?;
-
-        let conn_to_server = TcpStream::connect(remote_addr.clone()).await?;
-
-        let server_stream = CiperTcpStream::new(conn_to_server, password.clone());
-        spawn_and_log_err(serve_conn(server_stream, stream));
+    while let Some(stream) = listener.incoming().next().await {
+        spawn_and_log_err(serve_conn(
+            CiperTcpStream::new(TcpStream::connect(server.clone()).await?, password.clone()),
+            stream?,
+        ));
     }
+
     Ok(())
 }
 
-async fn serve_conn<T>(
-    mut server_stream: T,
-    // conn_to_server: TcpStream,
-    mut stream: TcpStream,
-) -> Result<()>
+async fn serve_conn<T>(mut server_stream: T, mut stream: TcpStream) -> Result<()>
 where
     T: Read + Write + Unpin,
     for<'a> &'a T: Read + Write + Unpin,
@@ -52,19 +52,9 @@ where
 
     match req.parse(&buf[0..n]) {
         Ok(_) => {
-            let mut host: Option<&str> = None;
-            debug!("req {req:?}");
-            for h in req.headers {
-                if h.name == "Host" {
-                    host = Some(std::str::from_utf8(h.value)?);
-                }
-            }
-            let host = match host {
-                Some(h) => h,
-                None => {
-                    error!("invalid request");
-                    return Ok(());
-                }
+            let host = match req.headers.iter().find(|h| h.name.eq("Host")) {
+                Some(h) => str::from_utf8(h.value)?,
+                None => return Ok(error!("invalid request")),
             };
 
             // Serve pac file
@@ -79,18 +69,17 @@ where
                 return Ok(());
             }
 
-            info!("{}", host);
+            info!("{host}");
 
             server_stream = req_socks5(server_stream, host).await?;
+
             match req.method {
                 Some("CONNECT") => {
                     stream
-                        .write_all("HTTP/1.1 200 Tunnel established\r\n\r\n".as_bytes())
-                        .await?;
+                        .write_all(b"HTTP/1.1 200 Tunnel established\r\n\r\n")
+                        .await?
                 }
-                _ => {
-                    server_stream.write_all(&buf[..n]).await?;
-                }
+                _ => server_stream.write_all(&buf[..n]).await?,
             }
         }
         // 解析失败 则直接理解为socks5代理

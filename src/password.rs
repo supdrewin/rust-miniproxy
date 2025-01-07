@@ -8,6 +8,10 @@ pub fn new() -> String {
     base64.encode(&password)
 }
 
+pub fn encode_password(password: &str) -> String {
+    base64.encode(password)
+}
+
 pub fn decode_password(password: &str) -> Result<Vec<u8>, DecodeError> {
     base64.decode(password)
 }

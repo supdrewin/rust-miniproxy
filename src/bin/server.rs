@@ -1,40 +1,21 @@
 use async_std::task;
-use log::error;
 
-use miniproxy::{cli::Cli, config::ServerConfig, daemon::set_daemon, server::run_server};
+use miniproxy::{
+    cli::Cli,
+    config::{Config, ServerConfig},
+    daemon::set_daemon,
+    server::run_server,
+    Result,
+};
 
-const SERVER_NAME: &'static str = "miniserver";
-
-fn main() {
+fn main() -> Result<()> {
     env_logger::init();
 
     let cli = Cli::new();
+    let config = ServerConfig::load_or_default(cli.config.as_deref())?;
 
-    let mut config = match cli.config {
-        Some(path) => ServerConfig::load_from_file(&path).unwrap(),
-        None => ServerConfig::default(),
-    };
+    cli.daemon.then(|| set_daemon("miniserver"));
+    config.save("config/server.json")?;
 
-    if let Some(host) = cli.host {
-        config.host = Some(host);
-    }
-
-    if let Some(port) = cli.port {
-        config.port = match port.parse::<u16>() {
-            Ok(port) => Some(port),
-            Err(e) => {
-                return error!("invalid port {e:?}");
-            }
-        }
-    }
-
-    if let Some(password) = cli.password {
-        config.password = Some(password);
-    }
-
-    if cli.daemon {
-        set_daemon(SERVER_NAME);
-    }
-
-    task::block_on(run_server(config)).unwrap();
+    Ok(task::block_on(run_server(config))?)
 }

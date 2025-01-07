@@ -1,6 +1,6 @@
-use std::fs;
+use std::fs::{self, File};
 
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json;
 
 use crate::{password, Result};
@@ -18,6 +18,26 @@ pub struct ServerConfig {
     pub host: Option<String>,
     pub port: Option<u16>,
     pub password: Option<String>,
+}
+
+pub trait Config: Serialize + DeserializeOwned {
+    fn load(path: &str) -> Result<Self> {
+        Ok(serde_json::from_reader(File::open(path)?)?)
+    }
+
+    fn load_or_default(path: Option<&str>) -> Result<Self>
+    where
+        Self: Default,
+    {
+        match path {
+            Some(path) => Self::load(path),
+            None => Ok(Self::default()),
+        }
+    }
+
+    fn save(&self, path: &str) -> Result<()> {
+        Ok(fs::write(path, &serde_json::to_string_pretty(self)?)?)
+    }
 }
 
 impl Default for ServerConfig {
@@ -41,18 +61,6 @@ impl Default for LocalConfig {
     }
 }
 
-impl ServerConfig {
-    pub fn load_from_file(path: &str) -> Result<ServerConfig> {
-        let file = fs::OpenOptions::new().read(true).open(path)?;
-        let config: ServerConfig = serde_json::from_reader(file)?;
-        Ok(config)
-    }
-}
+impl Config for ServerConfig {}
 
-impl LocalConfig {
-    pub fn load_from_file(path: &str) -> Result<LocalConfig> {
-        let file = fs::OpenOptions::new().read(true).open(path)?;
-        let config: LocalConfig = serde_json::from_reader(file)?;
-        Ok(config)
-    }
-}
+impl Config for LocalConfig {}

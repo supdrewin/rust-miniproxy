@@ -18,13 +18,13 @@ $env:RUST_LOG="mini=info"
 b. 服务器上部署`miniserver`，启动的时候会随机产生一个base64编码的密码
 
 ``` pwsh
-cargo r -r --bin miniserver -- -h 0.0.0.0 -p 59999
+cargo r -r --bin miniserver -- -c config/server.json
 ```
 
 c. 本地启动`minilocal`，通过`-P`绑定从服务器上回显的base64码
 
 ``` pwsh
-cargo r -r --bin minilocal -- -s "<place your server IP here>:59999" -p 9998 -P "<place base64 code here>"
+cargo r -r --bin minilocal -- -c config/local.json
 ```
 
 c. 进行系统代理设定，代理地址为`127.0.0.0:9998`，或者也可以设置自动代理，PAC文件地址为`http://127.0.0.1:9998/pac`。
