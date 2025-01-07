@@ -1,18 +1,18 @@
 use std::str;
 
-use async_std::net::{TcpListener, TcpStream};
-use async_std::prelude::*;
+use async_std::{
+    io::{Read, Write},
+    net::{TcpListener, TcpStream},
+    prelude::*,
+};
+
+use futures::future::FutureExt;
 use log::{error, info};
 
-use crate::ciper::CiperTcpStream;
-use crate::config::LocalConfig;
-use crate::pac::serve_pac_file;
-use crate::password::decode_password;
-use crate::socks5::req_socks5;
-use crate::spawn_and_log_err;
-use crate::Result;
-use async_std::io::{Read, Write};
-use futures::future::FutureExt;
+use crate::{
+    ciper::CiperTcpStream, config::LocalConfig, pac::serve_pac_file, password::decode_password,
+    socks5::req_socks5, spawn_and_log_err, Result,
+};
 
 pub async fn run_local(config: LocalConfig) -> Result<()> {
     let host = config.host.unwrap();
@@ -46,6 +46,8 @@ where
 {
     let mut buf = vec![0_u8; 1024];
     let n = stream.read(&mut buf).await?;
+
+    // info!("{}", String::from_utf8(buf.clone())?);
 
     let mut headers = [httparse::EMPTY_HEADER; 16];
     let mut req = httparse::Request::new(&mut headers);

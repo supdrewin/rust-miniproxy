@@ -1,13 +1,19 @@
-use async_std::io::{Read, Write};
-use async_std::net::TcpStream;
-use async_std::net::ToSocketAddrs;
-use async_std::prelude::*;
+use std::{
+    io::Cursor,
+    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
+};
+
+use async_std::{
+    io::{Read, Write},
+    net::{TcpStream, ToSocketAddrs},
+    prelude::*,
+};
+
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use futures::future::FutureExt;
 use log::info;
-use std::io::Cursor;
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
-type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
+use crate::Result;
 
 pub async fn serve_socks5<T>(mut stream: T) -> Result<()>
 where

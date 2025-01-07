@@ -5,8 +5,6 @@ use async_std::{
     task::{Context, Poll},
 };
 
-// use log::debug;
-
 pub struct CiperTcpStream {
     stream: TcpStream,
     decode_password: Vec<u8>,
