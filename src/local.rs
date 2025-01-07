@@ -16,26 +16,17 @@ pub async fn run_local(config: LocalConfig) -> Result<()> {
     let addr = format!("{}:{}", config.host.unwrap(), config.port.unwrap());
     let remote_addr = config.server.unwrap();
     let password = config.password.unwrap();
+
     info!("MINILOCAL listening on {}", addr);
     info!("Serve [ HTTP | HTTPS | SOCKS5 ]");
-    info!("PAC url http://{}/pac", addr);
+    info!("PAC url http://{addr}/pac");
 
     let password = decode_password(&password)?;
-
-    #[cfg(feature = "gkd")]
-    let gkd_client = {
-        info!("powered by gkd-rs");
-        use gkd::Client;
-        Client::connect(&remote_addr.clone(), 2).await?
-    };
 
     let server = TcpListener::bind(addr).await?;
     while let Some(stream) = server.incoming().next().await {
         let stream = stream?;
 
-        #[cfg(feature = "gkd")]
-        let conn_to_server = gkd_client.get_connection().await?;
-        #[cfg(not(feature = "gkd"))]
         let conn_to_server = TcpStream::connect(remote_addr.clone()).await?;
 
         let server_stream = CiperTcpStream::new(conn_to_server, password.clone());
@@ -62,7 +53,7 @@ where
     match req.parse(&buf[0..n]) {
         Ok(_) => {
             let mut host: Option<&str> = None;
-            debug!("req {:?}", req);
+            debug!("req {req:?}");
             for h in req.headers {
                 if h.name == "Host" {
                     host = Some(std::str::from_utf8(h.value)?);
@@ -113,7 +104,8 @@ where
 
     let copy_a = async_std::io::copy(lr, tw);
     let copy_b = async_std::io::copy(tr, lw);
-    let r = futures::select! {
+
+    let _r = futures::select! {
         r1 = copy_a.fuse() => r1,
         r2 = copy_b.fuse() => r2
     };

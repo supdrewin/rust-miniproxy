@@ -1,34 +1,19 @@
-use async_std::io;
-use async_std::io::{Read, Write};
-use async_std::net::TcpStream;
-use async_std::pin::Pin;
-use async_std::task::{Context, Poll};
-#[cfg(feature = "gkd")]
-use gkd::Connection;
-use log::debug;
+use async_std::{
+    io::{self, Read, Write},
+    net::TcpStream,
+    pin::Pin,
+    task::{Context, Poll},
+};
+
+// use log::debug;
+
 pub struct CiperTcpStream {
-    #[cfg(feature = "gkd")]
-    stream: Connection,
-    #[cfg(not(feature = "gkd"))]
     stream: TcpStream,
     decode_password: Vec<u8>,
     encode_password: Vec<u8>,
 }
 
 impl CiperTcpStream {
-    #[cfg(feature = "gkd")]
-    pub fn new(stream: Connection, encode_password: Vec<u8>) -> CiperTcpStream {
-        let mut decode_password = vec![0; 256];
-        for (i, b) in encode_password.iter().enumerate() {
-            decode_password[*b as usize] = i as u8;
-        }
-        Self {
-            stream,
-            encode_password,
-            decode_password,
-        }
-    }
-    #[cfg(not(feature = "gkd"))]
     pub fn new(stream: TcpStream, encode_password: Vec<u8>) -> CiperTcpStream {
         let mut decode_password = vec![0; 256];
         for (i, b) in encode_password.iter().enumerate() {

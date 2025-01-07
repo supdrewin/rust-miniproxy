@@ -1,75 +1,40 @@
 use async_std::task;
-use clap::{App, Arg};
 use log::error;
-use miniproxy::config::ServerConfig;
-use miniproxy::daemon::set_daemon;
-use miniproxy::server::run_server;
+
+use miniproxy::{cli::Cli, config::ServerConfig, daemon::set_daemon, server::run_server};
 
 const SERVER_NAME: &'static str = "miniserver";
 
 fn main() {
     env_logger::init();
-    let matches = App::new(SERVER_NAME)
-        .version(env!("CARGO_PKG_VERSION"))
-        .arg(
-            Arg::with_name("host")
-                .short("h")
-                .long("host")
-                .value_name("HOST")
-                .help("host"),
-        )
-        .arg(
-            Arg::with_name("port")
-                .short("p")
-                .long("port")
-                .value_name("PORT")
-                .help("port"),
-        )
-        .arg(Arg::with_name("daemon").short("d").help("daemonize"))
-        .arg(
-            Arg::with_name("config")
-                .short("c")
-                .long("config")
-                .value_name("CONFIG")
-                .help("config path"),
-        )
-        .get_matches();
 
-    let daemonize = matches.is_present("daemon");
-    let mut config = match matches.value_of("config") {
-        Some(ref path) => match ServerConfig::load_from_file(path) {
-            Ok(config) => config,
-            Err(e) => {
-                error!("{:?}", e);
-                return;
-            }
-        },
+    let cli = Cli::new();
+
+    let mut config = match cli.config {
+        Some(path) => ServerConfig::load_from_file(&path).unwrap(),
         None => ServerConfig::default(),
     };
 
-    if let Some(host) = matches.value_of("host") {
-        config.host = Some(host.to_string());
+    if let Some(host) = cli.host {
+        config.host = Some(host);
     }
 
-    if let Some(port) = matches.value_of("port") {
+    if let Some(port) = cli.port {
         config.port = match port.parse::<u16>() {
             Ok(port) => Some(port),
             Err(e) => {
-                error!("invalid port {:?}", e);
-                return;
+                return error!("invalid port {e:?}");
             }
         }
     }
 
-    if let Some(password) = matches.value_of("password") {
-        config.password = Some(password.to_string());
+    if let Some(password) = cli.password {
+        config.password = Some(password);
     }
 
-    if daemonize {
+    if cli.daemon {
         set_daemon(SERVER_NAME);
     }
 
-    if let Err(e) = task::block_on(run_server(config)) {
-        error!("{:?}", e);
-    }
+    task::block_on(run_server(config)).unwrap();
 }

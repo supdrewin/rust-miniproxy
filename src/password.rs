@@ -1,15 +1,13 @@
-use base64::{self, DecodeError};
+use base64::{engine::general_purpose::STANDARD as base64, DecodeError, Engine};
 use rand::seq::SliceRandom;
-use rand::thread_rng;
 
 pub fn new() -> String {
-    let mut rng = thread_rng();
-    let mut password: Vec<u8> = (0..=255).collect();
-    password.shuffle(&mut rng);
+    let mut password = (0..=255).collect::<Vec<_>>();
+    password.shuffle(&mut rand::thread_rng());
 
-    base64::encode(&password)
+    base64.encode(&password)
 }
 
 pub fn decode_password(password: &str) -> Result<Vec<u8>, DecodeError> {
-    base64::decode(password)
+    base64.decode(password)
 }

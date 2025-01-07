@@ -1,8 +1,9 @@
-use crate::password;
-use crate::Result;
+use std::fs;
+
 use serde::{Deserialize, Serialize};
 use serde_json;
-use std::fs;
+
+use crate::{password, Result};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LocalConfig {

@@ -1,40 +1,34 @@
 # miniproxy
 
-> 1.39 stable终于发布啦！
-
-使用Rust 1.39.0实现的简易代理，同时支持HTTP，HTTPS和SOCKS5协议。本项目仅用于学习交流。
-
-## 如何编译
-
-首先安装Rust，如何安装请移步[官网](https://www.rust-lang.org/learn/get-started)
-注意由于需要使用async/await，所以需要指定rust版本为1.39(stable)
-
-```sh
-cargo build --release
-```
-
-默认开启TCP加速，使用[gkd-rs](https://github.com/importcjj/gkd-rs)提供加速功能。
-可在编译时使用--no-default-features关闭加速功能。
-
-二进制文件会在项目目录的target/release文件夹下，找到两个名为`minilocal`和`miniserver`的二进制文件即可。关于如何交叉编译，请自行搜索。不过我自己在macbook上交叉编译就没成功过。
+使用Rust实现的简易代理，同时支持HTTP，HTTPS和SOCKS5协议。本项目仅用于学习交流。
 
 ## 如何使用
 
-本代理分为两部分：`minilocal`和`miniserver`。`miniserver`运行于网络服务器上，`minilocal`运行于本地。
+> 首先安装Rust，如何安装请移步[官网](https://www.rust-lang.org/learn/get-started)
 
-a. 先在服务器上部署`miniserver`，启动的时候会随机产生一个base64编码的密码
+本代理分为两部分：`minilocal`和`miniserver`。
+`miniserver`运行于网络服务器上，`minilocal`运行于本地。
 
-``` sh
-RUST_LOG=mini=info ./miniserver -h 0.0.0.0 -p 59999 -d
+a. 先通过环境变量设置日志级别(Powershell)
+
+``` pwsh
+$env:RUST_LOG="mini=info"
 ```
 
-b. 然后在本地启动`minilocal`，需要指定server的通讯密码
+b. 服务器上部署`miniserver`，启动的时候会随机产生一个base64编码的密码
 
-``` sh
-RUST_LOG=mini=info ./minilocal -s "xxx.xx.xx.xx:59999" -p 9998 -P xxxxxx
+``` pwsh
+cargo r -r --bin miniserver -- -h 0.0.0.0 -p 59999
 ```
 
-c. 进行系统代理设定，代理地址为`127.0.0.0:9998`，或者也可以设置自动代理，PAC文件地址为`http://127.0.0.1:9998/pac`。本代理同时支持HTTP，HTTPS和SOCKS5协议
+c. 本地启动`minilocal`，通过`-P`绑定从服务器上回显的base64码
+
+``` pwsh
+cargo r -r --bin minilocal -- -s "<place your server IP here>:59999" -p 9998 -P "<place base64 code here>"
+```
+
+c. 进行系统代理设定，代理地址为`127.0.0.0:9998`，或者也可以设置自动代理，PAC文件地址为`http://127.0.0.1:9998/pac`。
+   本代理同时支持HTTP，HTTPS和SOCKS5协议。
 
 ## 原理及教程
 

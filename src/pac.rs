@@ -1,8 +1,7 @@
-use crate::Result;
-use async_std::fs;
-use async_std::net::TcpStream;
-use async_std::prelude::*;
+use async_std::{fs, net::TcpStream, prelude::*};
 use log::info;
+
+use crate::Result;
 
 pub async fn serve_pac_file(mut stream: TcpStream) -> Result<()> {
     info!("serve pac file");
